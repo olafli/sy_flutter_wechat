@@ -1,5 +1,7 @@
 #import "SyFlutterWechatPlugin.h"
 
+__weak SyFlutterWechatPlugin* __FlutterWechatPlugin;
+
 @interface SyFlutterWechatPlugin()
 
 @property FlutterResult result;
@@ -7,6 +9,16 @@
 @end
 
 @implementation SyFlutterWechatPlugin
+-(id)init{
+    if(self = [super init]){
+
+        __FlutterWechatPlugin  = self;
+
+    }
+    return self;
+}
+
+
 + (void)registerWithRegistrar:(NSObject<FlutterPluginRegistrar>*)registrar {
   FlutterMethodChannel* channel = [FlutterMethodChannel
       methodChannelWithName:@"sy_flutter_wechat"
@@ -48,16 +60,16 @@
     NSString *imageUrl = call.arguments[@"imageUrl"];
     NSData *imageData =[NSData dataWithContentsOfURL:[NSURL URLWithString:imageUrl]];;
     UIImage *originImage = [UIImage imageWithData:imageData];
-    
+
     WXImageObject *imageObj = [WXImageObject object];
     imageObj.imageData = imageData;
-    
+
     WXMediaMessage *mediaMsg = [WXMediaMessage message];
     mediaMsg.mediaObject = imageObj;
-    
+
     UIImage *thumbImage = [self compressImage:originImage toByte:32768];
     [mediaMsg setThumbImage:thumbImage];
-    
+
     SendMessageToWXReq* req = [[SendMessageToWXReq alloc] init];
     req.message = mediaMsg;
     req.bText = NO;
@@ -68,11 +80,11 @@
 
 - (void)shareWebPage:(FlutterMethodCall*)call result:(FlutterResult)result{
     NSString *imageUrl = call.arguments[@"imageUrl"];
-    
+
     NSData *imageData =[NSData dataWithContentsOfURL:[NSURL URLWithString:imageUrl]];;
     UIImage *originImage = [UIImage imageWithData:imageData];
     UIImage *thumbImage = [self compressImage:originImage toByte:32768];
-    
+
     WXWebpageObject* webObj = [WXWebpageObject object];
     webObj.webpageUrl = call.arguments[@"webPageUrl"];
 
@@ -81,7 +93,7 @@
     mediaMsg.description = call.arguments[@"description"];
     [mediaMsg setThumbImage:thumbImage];
     mediaMsg.mediaObject = webObj;
-    
+
     SendMessageToWXReq* req = [[SendMessageToWXReq alloc] init];
     req.message = mediaMsg;
     req.bText = NO;
@@ -125,7 +137,7 @@
     CGFloat compression = 1;
     NSData *data = UIImageJPEGRepresentation(image, compression);
     if (data.length < maxLength) return image;
-    
+
     CGFloat max = 1;
     CGFloat min = 0;
     for (int i = 0; i < 6; ++i) {
@@ -141,7 +153,7 @@
     }
     UIImage *resultImage = [UIImage imageWithData:data];
     if (data.length < maxLength) return resultImage;
-    
+
     // Compress by size
     NSUInteger lastDataLength = 0;
     while (data.length > maxLength && data.length != lastDataLength) {
@@ -155,7 +167,7 @@
         UIGraphicsEndImageContext();
         data = UIImageJPEGRepresentation(resultImage, compression);
     }
-    
+
     return resultImage;
 }
 
@@ -183,6 +195,18 @@
         return [WXApi handleOpenURL:url delegate:self];
     }
     return YES;
+}
+
++(BOOL)handleOpenURL:(NSURL*)url{
+    if(!__FlutterWechatPlugin)return NO;
+    return [__FlutterWechatPlugin handleOpenURL:url];
+}
+
+-(BOOL)handleOpenURL:(NSURL*)url{
+    if ([url.host isEqualToString:@"pay"]) {
+        return [WXApi handleOpenURL:url delegate:self];
+    }
+    return NO;
 }
 
 @end
